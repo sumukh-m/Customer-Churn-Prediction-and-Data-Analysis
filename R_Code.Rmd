@@ -1,0 +1,193 @@
+---
+title: "Customer Churn Prediction and "
+output: html_notebook
+---
+
+# Importing the Libraries
+
+```{r}
+library(dplyr)
+library(caret)
+library(glmnet)
+library(ggplot2)
+library(randomForest)
+library(xgboost)
+library(e1071)
+library(ensembleR)
+```
+
+# Load Dataset
+```{r}
+bank_churn <- read.csv("Bank_Churn.csv", header = TRUE)
+```
+
+# Data Cleaning and Preprocessing
+```{r}
+# Drop 'RowNumber', 'CustomerId', and 'Bank DOJ' columns
+bank_churn <- subset(bank_churn, select = -c(RowNumber, CustomerId, Bank.DOJ))
+```
+
+```{r}
+# Split the dataset into features (X) and target (y)
+X <- bank_churn[, !(names(bank_churn) %in% c('Exited'))]
+y <- bank_churn$Exited
+
+# Set the seed for reproducibility
+set.seed(123)
+
+# Split the data into training and testing sets
+splitIndex <- createDataPartition(y, p = 0.8, list = FALSE)
+X_train <- X[splitIndex, ]
+y_train <- y[splitIndex]
+X_test <- X[-splitIndex, ]
+y_test <- y[-splitIndex]
+```
+
+```{r}
+dim(X_train)
+dim(X_test)
+```
+
+
+# Model Traing, Prediction and Evaluation
+
+## Logistic Regression
+
+```{r}
+# Train a Logistic Regression model
+logreg_model <- glm(y_train ~ ., data = cbind(y_train, X_train), family = "binomial")
+```
+
+```{r}
+# Predict on the testing data
+y_pred <- predict(logreg_model, newdata = cbind(y_test, X_test), type = "response")
+```
+
+```{r}
+# Set the threshold for classification
+threshold <- 0.5
+
+# Convert y_pred into binary predictions
+binary_predictions <- ifelse(y_pred > threshold, 1, 0)
+
+# Calculate accuracy and display classification report
+accuracy <- sum(binary_predictions == y_test) / length(y_test)
+classification_rep <- table(y_test, binary_predictions)
+
+cat("Accuracy:", accuracy, "%\n")
+confusion_mat <- confusionMatrix(data = factor(binary_predictions), reference = factor(y_test))
+confusion_mat
+```
+## Random Forest
+
+```{r}
+# Train a Random Forest classifier
+rf_model <- randomForest(y_train ~ ., data = cbind(y_train, X_train))
+```
+
+```{r}
+# Predict on the testing data
+rf_predictions <- predict(rf_model, newdata = X_test, type = "response")
+```
+
+```{r}
+# Set the threshold for classification
+threshold <- 0.5
+
+# Convert y_pred into binary predictions
+binary_predictions <- ifelse(rf_predictions > threshold, 1, 0)
+
+# Calculate accuracy and display classification report
+accuracy <- sum(binary_predictions == y_test) / length(y_test)
+classification_rep <- table(y_test, binary_predictions)
+
+cat("Accuracy:", accuracy, "%\n")
+confusion_mat <- confusionMatrix(data = factor(binary_predictions), reference = factor(y_test))
+confusion_mat
+```
+## XGBoost (Extreme Gradient Boosting)
+
+```{r}
+# Convert data to matrices
+X_train_matrix <- as.matrix(X_train)
+X_test_matrix <- as.matrix(X_test)
+
+# Convert data to DMatrix format
+dtrain <- xgb.DMatrix(data = X_train_matrix, label = y_train)
+dtest <- xgb.DMatrix(data = X_test_matrix)
+
+# Train an XGBoost classifier
+xgb_params <- list(objective = "binary:logistic", eval_metric = "logloss")
+xgb_model <- xgb.train(params = xgb_params, data = dtrain, nrounds = 100)
+```
+
+```{r}
+# Predict on the testing data
+xgb_predictions <- predict(xgb_model, newdata = dtest)
+```
+
+```{r}
+# Set the threshold for classification
+threshold <- 0.5
+
+# Convert y_pred into binary predictions
+binary_predictions <- ifelse(xgb_predictions > threshold, 1, 0)
+
+# Calculate accuracy and display classification report
+accuracy <- sum(binary_predictions == y_test) / length(y_test)
+classification_rep <- table(y_test, binary_predictions)
+
+cat("Accuracy:", accuracy, "%\n")
+confusion_mat <- confusionMatrix(data = factor(binary_predictions), reference = factor(y_test))
+confusion_mat
+```
+## Support Vecter Machine (SVM)
+
+```{r}
+# Train an SVM classifier
+svm_model <- svm(y_train ~ ., data = cbind(y_train, X_train))
+```
+
+```{r}
+# Predict on the testing data
+svm_predictions <- predict(svm_model, newdata = X_test)
+```
+
+```{r}
+# Set the threshold for classification
+threshold <- 0.5
+
+# Convert y_pred into binary predictions
+binary_predictions <- ifelse(svm_predictions > threshold, 1, 0)
+
+# Calculate accuracy and display classification report
+accuracy <- sum(binary_predictions == y_test) / length(y_test)
+classification_rep <- table(y_test, binary_predictions)
+
+cat("Accuracy:", accuracy, "%\n")
+confusion_mat <- confusionMatrix(data = factor(binary_predictions), reference = factor(y_test))
+confusion_mat
+```
+## Ensemble Model
+
+```{r}
+# Combine the predictions into an ensemble prediction (simple averaging)
+ensemble_predictions <- (y_pred + rf_predictions + xgb_predictions + svm_predictions) / 4
+```
+
+
+```{r}
+# Set the threshold for classification
+threshold <- 0.5
+
+# Convert y_pred into binary predictions
+binary_predictions <- ifelse(ensemble_predictions > threshold, 1, 0)
+
+# Calculate accuracy and display classification report
+accuracy <- sum(binary_predictions == y_test) / length(y_test)
+classification_rep <- table(y_test, binary_predictions)
+
+cat("Accuracy:", accuracy, "%\n")
+confusion_mat <- confusionMatrix(data = factor(binary_predictions), reference = factor(y_test))
+confusion_mat
+```
