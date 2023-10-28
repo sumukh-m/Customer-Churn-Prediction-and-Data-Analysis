@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Prediction App</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <h2>Customer Exit Prediction</h2>
+    <form action="/predict" method="post">
+        CreditScore: <input type="text" name="CreditScore"><br>
+        GeographyID: <input type="text" name="GeographyID"><br>
+        GenderID: <input type="text" name="GenderID"><br>
+        Age: <input type="text" name="Age"><br>
+        Tenure: <input type="text" name="Tenure"><br>
+        Balance: <input type="text" name="Balance"><br>
+        NumOfProducts: <input type="text" name="NumOfProducts"><br>
+        HasCrCard: <input type="text" name="HasCrCard"><br>
+        IsActiveMember: <input type="text" name="IsActiveMember"><br>
+        EstimatedSalary: <input type="text" name="EstimatedSalary"><br>
+        <input type="submit" value="Predict">
+    </form>
+    {% if prediction %}
+        <h3>Prediction: {{ prediction }}</h3>
+    {% endif %}
+</body>
+</html>
